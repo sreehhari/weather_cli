@@ -1,7 +1,5 @@
 use colored::*;
-use dotenv::dotenv;
 use serde::Deserialize;
-use std::env;
 use std::io;
 
 #[derive(Deserialize, Debug)]
@@ -29,14 +27,10 @@ struct Wind {
 }
 
 //fucntion to get the weather info from open weather map
-fn get_weather_info(
-    city: &str,
-    country_code: &str,
-    api_key: &str,
-) -> Result<WeatherResponse, reqwest::Error> {
+fn get_weather_info(city: &str, country_code: &str) -> Result<WeatherResponse, reqwest::Error> {
     let url: String = format!(
-        "http://api.openweathermap.org/data/2.5/weather?q={},{}&units=metric&appid={}",
-        city, country_code, api_key
+        "https://weather-proxy-sable.vercel.app/weather?city={}&country={}",
+        city, country_code
     );
     let response = reqwest::blocking::get(&url)?;
     let response_json: WeatherResponse = response.json::<WeatherResponse>()?;
@@ -98,10 +92,8 @@ fn main() {
             .expect("invalid input");
         let country_code = country_code.trim();
 
-        dotenv().ok();
-        let api_key = env::var("API_KEY").expect("api key not found in dotenv");
         //calling the function to get the weather
-        match get_weather_info(&city, &country_code, api_key.as_str()) {
+        match get_weather_info(&city, &country_code) {
             Ok(response) => {
                 display_weather_info(&response);
             }
