@@ -1,5 +1,7 @@
 use colored::*;
+use dotenv::dotenv;
 use serde::Deserialize;
+use std::env;
 use std::io;
 
 #[derive(Deserialize, Debug)]
@@ -33,8 +35,8 @@ fn get_weather_info(
     api_key: &str,
 ) -> Result<WeatherResponse, reqwest::Error> {
     let url: String = format!(
-        "https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API key}",
-        city, country_code, api_key,
+        "http://api.openweathermap.org/data/2.5/weather?q={},{}&units=metric&appid={}",
+        city, country_code, api_key
     );
     let response = reqwest::blocking::get(&url)?;
     let response_json: WeatherResponse = response.json::<WeatherResponse>()?;
@@ -47,7 +49,7 @@ fn display_weather_info(response: &WeatherResponse) {
     let temperature: f64 = response.main.temp;
     let humidity: f64 = response.main.humidity;
     let pressure: f64 = response.main.pressure;
-    let wind_speed: f64 = response.main.wind_speed;
+    let wind_speed: f64 = response.wind.speed;
 
     //inputing weather info into a string
     let weather_text: String = format!(
@@ -65,7 +67,7 @@ fn display_weather_info(response: &WeatherResponse) {
         wind_speed
     );
     //coloring the text based on temp
-    let temp_colored_text: coloredString = match description.as_str() {
+    let temp_colored_text: ColoredString = match description.as_str() {
         "clear sky" => weather_text.bright_yellow(),
         "few clouds" | "scattered clouds" | "broken clouds" => weather_text.bright_blue(),
         "overcast clouds" | "mist" | "haze" | "smoke" | "sand" | "dust" | "fog" | "squalls" => {
@@ -74,6 +76,7 @@ fn display_weather_info(response: &WeatherResponse) {
         "shower rain" | "rain" | "thunderstorm" | "snow" => weather_text.bright_cyan(),
         _ => weather_text.normal(),
     };
+    println!("{}", temp_colored_text);
 }
 
 fn main() {
@@ -81,7 +84,44 @@ fn main() {
     loop {
         println!("{}", "Please enter the name of the city:".bright_green());
         let mut city = String::new();
-        io::Stdin().read_line(&mut city).expect("invalid input");
-        let city: &str = city.trim();
+        io::stdin().read_line(&mut city).expect("invalid input");
+        let city = city.trim();
+
+        println!(
+            "{}",
+            "Please enter the country code(example : IN for India and US for the United States):"
+                .bright_green()
+        );
+        let mut country_code = String::new();
+        io::stdin()
+            .read_line(&mut country_code)
+            .expect("invalid input");
+        let country_code = country_code.trim();
+
+        dotenv().ok();
+        let api_key = env::var("API_KEY").expect("api key not found in dotenv");
+        //calling the function to get the weather
+        match get_weather_info(&city, &country_code, api_key.as_str()) {
+            Ok(response) => {
+                display_weather_info(&response);
+            }
+            Err(err) => {
+                eprintln!("Error {}", err)
+            }
+        }
+        println!(
+            "{}",
+            "Do you wanna check the weather again?(y/n)".bright_green()
+        );
+        let mut input = String::new();
+        io::stdin()
+            .read_line(&mut input)
+            .expect("invalid input vro");
+        let input = input.trim().to_lowercase();
+
+        if input != "y" && input != "yes" {
+            println!("またね");
+            break;
+        }
     }
 }
